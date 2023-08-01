@@ -5,10 +5,20 @@ from pid import PID
 from video import Video
 from bluerov_interface import BlueROV
 from pymavlink import mavutil
-from apriltag_detection import *
 from dt_apriltags import Detector
 
 # TODO: import your processing functions
+from apriltag_detection import *
+
+def write_video(video):
+    fps = int(video.get(cv2.CAP_PROP_FPS))
+    width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    output_file = 'output_apriltag_video.avi'
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    output_video = cv2.VideoWriter(output_file, fourcc, 30, (width, height))
+    
 
 
 # Create the video object
