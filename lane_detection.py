@@ -2,9 +2,9 @@ import cv2
 from random import randrange
 import numpy as np
 import matplotlib.pyplot as plt
-#from dt_apriltags import Detector
 import matplotlib.cm as cm
 import math
+
 def angle_between_lines(m1, m2):
     """
     Calculate the angle between two lines given their slopes.
@@ -49,18 +49,19 @@ def get_slopes_intercepts(lines):
     resultSet = set() #stores the slope as the key, and the intercept as the data
     slopeList = []
     xInterceptList = []
-    for line in lines:
-        x1, y1, x2, y2 = line[0]
-        slope = (y1-y2)/(x1-x2)
-        if slope == 0:
-            slope = 0.001
-        xIntercept = ((((1080 - y1)/slope)  )+ x1)
-        roundXIntercept = round(xIntercept, 0)
-        if not roundXIntercept in resultSet:
-            resultSet.add(roundXIntercept) 
-            xInterceptList.append(xIntercept)
-        #    resultSet[slope][1] += 1 # keep a counter of how many lines have been iterated through and added to the one slope for averaging later
-            slopeList.append(slope) 
+    if len(lines) > 0:
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            slope = (y1-y2)/(x1-x2)
+            if slope == 0:
+                slope = 0.001
+            xIntercept = ((((1080 - y1)/slope)  )+ x1)
+            roundXIntercept = round(xIntercept, 0)
+            if not roundXIntercept in resultSet:
+                resultSet.add(roundXIntercept) 
+                xInterceptList.append(xIntercept)
+            #    resultSet[slope][1] += 1 # keep a counter of how many lines have been iterated through and added to the one slope for averaging later
+                slopeList.append(slope)
 
     
     # for result in resultSet:
