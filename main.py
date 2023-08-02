@@ -140,7 +140,7 @@ def _get_frame():
                             # Gets the x-intercept and the slope of the line running through the center of the lane
                             center_intercept, center_slope = get_lane_center(frame.shape[1], lanes)
                             # Calculates the difference in horizontal position and heading/angle alignment with the center of the lane
-                            horizontal_diff, heading_diff = recommend_direction(center_intercept, center_slope)
+                            horizontal_diff, heading_diff = recommend_direction(frame.shape[1], center_intercept, center_slope)
 
                             # Calculates the yaw and lateral thruster magnitudes if the AUV is not aligned with the center of the lane
                             if(horizontal_diff != 0 and heading_diff != 0):
