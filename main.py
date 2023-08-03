@@ -48,19 +48,11 @@ def _get_frame():
     global frame, vertical_power, lateral_power, yaw_power, longitudinal_power, followRobot
 
     # Sets the values for the PID controllers for the vertical and horizontal directions
-    vertical_pid = PID(2, 0, 0, 100)
+    vertical_pid = PID(1, 0, 0, 100)
     horizontal_pid = PID(1, 0, 0, 100)
 
     # Creates a detector that can be used to detect the apriltags on the robot and on the walls
     at_detector = Detector(families='tag36h11',
-                    nthreads=1,
-                    quad_decimate=1.0,
-                    quad_sigma=0.0,
-                    refine_edges=1,
-                    decode_sharpening=0.25,
-                    debug=0)
-    
-    at_wall_detector = Detector(families='tag36h11', # should change tag
                     nthreads=1,
                     quad_decimate=1.0,
                     quad_sigma=0.0,
@@ -73,19 +65,22 @@ def _get_frame():
         print("Waiting for frame...")
         sleep(0.01)
 
+    #bluerov.set_rc_channel(9, 1100) #turns lights off if we need to
     # Tries to process a frame and adjust the robot's movement accordingly
     try:
         while True:
             if video.frame_available():
-                frame = video.frame() # Initializes the frame
+                # Initializes the frame
+                frame = video.frame()
                 
-                tags = detect_tag(frame, at_detector) # detects and returns all apriltags in the given frame
+                # detects and returns all apriltags in the given frame as well as the depth/z distance of the last april tag
+                tags, tag_z = detect_tag(frame, at_detector)
                 print("Got frame")
                 # Checks if any apriltags have been detected
-                if len(center_tags) > 0:
+                if len(tags) > 0:
                     # Sets followRobot variable to True so the robot will track the robot's apriltag and move towards it
                     followRobot = True
-                    # Utilizies the last tag found
+                    # Utilizies the center of the last tag found
                     center_tags = tags[-1]
                     print("Got tag")
                     # Gets the horizontal and vertical outputs for the PID to make thruster adjustments and move towards the other AUV's apriltag
@@ -98,7 +93,7 @@ def _get_frame():
                     lateral_power = horizontal_output
 
                     # Goes straight forward if the apriltag is already in the center of the AUV's camera
-                    if(vertical_power.almostEquals(0) and lateral_power.almostEquals(0)):
+                    if(vertical_power < 0.1 and lateral_power < 0.1):
                         longitudinal_power = 20
                     # Sets longitudinal/forward thruster magnitudes to 0 so it doesn't go forward
                     else:
@@ -108,15 +103,16 @@ def _get_frame():
                     cv2.imwrite("ROV_frame.jpg", img)
 
                     # Turns off thrusters and flashes lights on and off if the AUV is in "shooting" range of the other AUV
-                    if (center_tags.pose_t[2]<1):
+                    if (tag_z<1):
+                        vertical_power = 0
+                        lateral_power = 0
+                        longitudinal_power = 0
+
                         for i in range(10):
                             bluerov.set_rc_channel(9,1100)
                             time.sleep(0.2)
                             bluerov.set_rc_channel(9,1500)
-
-                        vertical_power = 0
-                        lateral_power = 0
-                        longitudinal_power = 0
+                            time.sleep(0.2)
 
                 # If no AUV's apriltag is detected, the AUV shuts off all thrusters and prepares to follow the lanes
                 else:
@@ -125,32 +121,41 @@ def _get_frame():
                     lateral_power = 0
                     longitudinal_power = 0
                 
+                """
                 # Checks if the AUV isn't following another robot and performs lane detection/following
                 if(followRobot == False):
+
+
+                    #turn
+
                     # Creates a list of the lines that have been detected
                     line_list = detect_lines(frame, 49, 50, 3, 500, 40)
-
+                    print (line_list)
+                    
                     # Tries to detect the lanes from any lines that have been found
-                    try:
+                    if(len(line_list) > 0):
+                        img = draw_lines(frame, line_list)
+                        cv2.imwrite("ROV_frame.jpg", img)
                         print("got line")
                         lanes = detect_lanes(line_list)
                         # Tries to analyze the lanes and align the AUV with the center of the lane
-                        try:
+                        if(len(lanes) > 0):
                             print("got lane")
                             # Gets the x-intercept and the slope of the line running through the center of the lane
                             center_intercept, center_slope = get_lane_center(frame.shape[1], lanes)
                             # Calculates the difference in horizontal position and heading/angle alignment with the center of the lane
                             horizontal_diff, heading_diff = recommend_direction(frame.shape[1], center_intercept, center_slope)
-
+                            print(horizontal_diff, heading_diff)
                             # Calculates the yaw and lateral thruster magnitudes if the AUV is not aligned with the center of the lane
                             if(horizontal_diff != 0 and heading_diff != 0):
+                                print("Made it through")
                                 # Sets longitudinal power to 0 to make sure the AUV isn't moving straight at the same time the robot is realigning itself
                                 longitudinal_power = 0
                                 # Calculates the yaw and lateral thruster powers
                                 yaw_power, lateral_power = lane_PID(heading_diff, horizontal_diff, pid_heading_lf, pid_horizontal_lf)
                             
                                 # Draws the lanes on the frame
-                                img = draw_lanes(frame, lanes)
+                                #img = draw_lanes(frame, lanes)
                                 
                                 print(yaw_power)
                                 print(lateral_power)
@@ -159,20 +164,20 @@ def _get_frame():
                                 longitudinal_power = 20
 
                             # Writes the image so we can see the lanes the AUV detected in VS code
-                            cv2.imwrite("ROV_frame.jpg", img)
+                            #cv2.imwrite("ROV_frame.jpg", img)
                         # Turns off thrusters and sets followRobot to False in case no lanes are detected
-                        except:
+                        else:
                             followRobot = False
                             vertical_power = 0
                             lateral_power = 0
                             longitudinal_power = 0
                     # Turns off thrusters and sets followRobot to False in case no lines/lanes are detected
-                    except:
+                    else:
                         followRobot = False
                         vertical_power = 0
                         lateral_power = 0
                         longitudinal_power = 0                  
-
+                    """
     except KeyboardInterrupt:
         return
 
@@ -188,7 +193,7 @@ def _send_rc():
         # Sets the powers of the thrusters based on outputs for the PID controllers
         bluerov.set_vertical_power(int(vertical_power))
         bluerov.set_lateral_power(-int(lateral_power))
-        bluerov.set_yaw_rate_power(int(yaw_power))
+        #bluerov.set_yaw_rate_power(int(yaw_power))
         bluerov.set_longitudinal_power(int(longitudinal_power))
 
 # Start the video thread

@@ -15,8 +15,10 @@ def get_lane_center(frameHeight, lanes):
     Parameters:
         - frameHeight (int): represents the height of the AUV's camera
         - lanes (list of line objects): contains a list of the two lines that act as the boundaries for the lane
+
+    Return: The x-intercept and slope of the line running through the center of the lane
     """
-    # Calculates the x-intercept of the line running through the center of the given lane
+
     # center_intercept = (lanes[0][0]+lanes[1][0])/2
 
     # Calculates the slopes of the two boundary lines
@@ -42,6 +44,8 @@ def draw_center_lane(img, center_intercept, center_slope, xPoint = 0, yPoint = 0
         - center_slope (float): the slope of the line running through the center of the lane
         - xPoint (float): the x-coordinate of the endpoint of the line running through the center of the lane
         - yPoint (float): the y-coordinate of the endpoint of the line running through the center of the lane
+
+    Return: The image with the center line running through the lane drawn
     """
 
     global imgPixelHeight 
@@ -58,6 +62,8 @@ def recommend_direction(frameWidth, center, slope):
         - frameWidth (int): the width of the frame/image being processed
         - center (float): the x-coordinate of the line running through the center of the lane
         - slope (float): the slope of the line running through the line running the center of the lane
+
+    Return: The horizontal error/difference between the robot and the x-intercept of the center of the lane and the difference in angle/heading
     """
     
     # Calculates the difference between the center of the camera and the x-coordinate of the center of the lane
@@ -84,6 +90,8 @@ def lane_PID(heading_error, strafe_error, heading_pid, strafe_pid):
         - strafe_error (float): the error for the distance between the AUV and the x-coordinate of the center of the lane
         - heading_pid (PID object): the PID controller for the AUV's heading
         - strafe_pid (PID object): the PID controller for the AUV's horizontal position
+
+    Return: The PID outputs for the heading and the horizontal distance/position
     """
     
     heading_output = np.clip(heading_pid.update(heading_error),-100,100) * 100
